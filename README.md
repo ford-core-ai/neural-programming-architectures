@@ -3,7 +3,7 @@
 Neural Programming Architecture implementation, in Tensorflow (V1.13). Based on the original
 [Making Neural Programming Architectures Generalize via Recursion](https://arxiv.org/abs/1511.06279) paper, by Cai, Shin , & Song.
 
-This implementation is an altered version of [Sidd Karamcheti's Neural Programmer-Interpreter repo](https://github.com/siddk/npi).
+This implementation is an altered version of [Ford Core AI's Neural Programmer-Interpreter repo](https://github.com/ford-core-ai/neural-programmer-interpreter), which was based on [Sidd Karamcheti's Neural Programmer-Interpreter repo](https://github.com/siddk/npi).
 
 The discussion below covers technical details of the NPI architecture, which is largely copied to implement NPA.
 The only addition made is the network's ability to call itself, and tracking of the network state throughout the recursion layers.
