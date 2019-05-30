@@ -60,11 +60,12 @@ class ScratchPad():           # Addition Environment
         if self.in1_ptr[1] < -self.cols:
             return True
         else:
-            lst = [x[1] for x in self.ptrs]
-            if len(set(lst)) == 1:
-                return sum(sum([self[x[0], :min(x[1] + 1, -1)] for x in self.ptrs])) == 0
-            else:
-                return False
+            return False
+        #     lst = [x[1] for x in self.ptrs]
+        #     if len(set(lst)) == 1:
+        #         return sum(sum([self[x[0], :min(x[1] + 1, -1)] for x in self.ptrs])) == 0
+        #     else:
+        #         return False
 
     def add1(self):
         temp = self[self.in1_ptr] + self[self.in2_ptr] + self[self.carry_ptr]
