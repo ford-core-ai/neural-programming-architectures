@@ -1,7 +1,7 @@
 # Neural Programming Architecture
 
 Neural Programming Architecture implementation, in Tensorflow (V1.13). Based on the original
-[Making Neural Programming Architectures Generalize via Recursion](https://arxiv.org/abs/1511.06279) paper, by Cai, Shin , & Song.
+[Making Neural Programming Architectures Generalize via Recursion](https://arxiv.org/abs/1704.06611) paper, by Cai, Shin , & Song.
 
 This implementation is an altered version of [Ford Core AI's Neural Programmer-Interpreter repo](https://github.com/ford-core-ai/neural-programmer-interpreter), which was based on [Sidd Karamcheti's Neural Programmer-Interpreter repo](https://github.com/siddk/npi).
 
