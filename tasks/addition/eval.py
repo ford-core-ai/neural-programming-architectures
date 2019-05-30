@@ -54,7 +54,7 @@ def repl(session, npi, data):
             result = inference(session, npi, x, y)
             correct_count += int(result)
 
-        print("Test Accuracy: ", correct_count/len(data))
+        print("Test Accuracy: %3.2f%%" % (100 * correct_count/len(data)))
 
     else:
         while True:
