@@ -1,9 +1,12 @@
-# Neural Programmer-Interpreters
+# Neural Programming Architecture
 
-Neural Programmer-Interpreter Implementation, in Tensorflow (V1.13). Based on the original
-[Neural Programmer-Interpreter](https://arxiv.org/abs/1511.06279) paper, by Reed and de Freitas.
+Neural Programming Architecture implementation, in Tensorflow (V1.13). Based on the original
+[Making Neural Programming Architectures Generalize via Recursion](https://arxiv.org/abs/1511.06279) paper, by Cai, Shin , & Song.
 
-This implementation is an updated version of [Sidd Karamcheti's public repo](https://github.com/siddk/npi).
+This implementation is an altered version of [Sidd Karamcheti's Neural Programmer-Interpreter repo](https://github.com/siddk/npi).
+
+The discussion below covers technical details of the NPI architecture, which is largely copied to implement NPA.
+The only addition made is the network's ability to call itself, and tracking of the network state throughout the recursion layers.
 
 ## NPI Overview ##
 
@@ -69,28 +72,34 @@ implemented either in `npi.py`, or `[task-name].py`:
                 
 ### Training Procedure ###
 
-To train the NPI model for the addition-task, call `python main.py --generate --do_train` from the root of this directory.
+To train the NPA model for the addition-task, call `python main.py --generate --do_train` from the root of this directory.
 This will generate the necessary train and test trace data for the addition-task, and start training.
 Once training is complete, the system will enter evaluation mode (outlined below).
                 
                 
 ### Evaluation Procedure ###
 
-To test addition-task NPI code interactively, just call `python main.py` from the root of this
+To test addition-task NPA code interactively, just call `python main.py` from the root of this
 directory, provided that you have saved model checkpoints in `tasks/addition/log/`. 
 This will drop you into a REPL, where you can enter two numbers to be added, and step through the
 predicted execution trace. 
 
 Note that for the time being, numbers much be smaller than 1000000000. This is not because of any 
-limitations on the part of the NPI, but because of the backend helper functions that display the 
+limitations on the part of the NPA, but because of the backend helper functions that display the 
 trace.
 
 A sample execution trace for the addition `18 + 7 = 25` can be found below. Note that this is trace
-is produced entirely by the NPI => There is are no external guides provided except for the initial
-call to "ADD 18 7":
+is produced entirely by the NPA => There is are no external guides provided except for the initial
+call to "ADD 18 7".
+
+It should be noted that this sample differs from [Sidd Karamcheti's Neural Programmer-Interpreter repo](https://github.com/siddk/npi) in several key ways.
+First, explicit commands to the LSHIFT function were added to more accurately reflect the NPI paper.
+Much more crucially, you'll notice that the program continues adding the leading zeros until the end of the scratch pad.
+This is to avoid failure cases in which the network pointers all show 0, but the addition is not yet complete, like 1007 + 3.
+The original network would incorrectly return 1007 + 3 = 10, because it was taught to stop early if the pointers all showed zeros.
 
 ```
-    Enter Two Numbers, or Hit Enter for Random Pair: 18 7    
+    Enter Two Numbers, or Hit Enter for Random Pair: 18 7
     
     Step: ADD, Arguments: [], Terminate: False
     IN 1: -1, IN 2: -1, CARRY: -1, OUT: -1
@@ -148,6 +157,14 @@ call to "ADD 18 7":
     -----------------------
     Output :     0000000005
     
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -1, IN 2: -1, CARRY: -1, OUT: -1
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000005
+    
     Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
     IN 1: -2, IN 2: -1, CARRY: -1, OUT: -1
     Input 1:     0000000018
@@ -180,6 +197,14 @@ call to "ADD 18 7":
     -----------------------
     Output :     0000000005
     
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -2, IN 2: -2, CARRY: -2, OUT: -2
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000005
+    
     Step: ADD1, Arguments: [], Terminate: False
     IN 1: -2, IN 2: -2, CARRY: -2, OUT: -2
     Input 1:     0000000018
@@ -189,6 +214,14 @@ call to "ADD 18 7":
     Output :     0000000005
     
     Step: WRITE, Arguments: [OUT, 2], Terminate: False
+    IN 1: -2, IN 2: -2, CARRY: -2, OUT: -2
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
     IN 1: -2, IN 2: -2, CARRY: -2, OUT: -2
     Input 1:     0000000018
     Input 2:     0000000007
@@ -220,8 +253,520 @@ call to "ADD 18 7":
     -----------------------
     Output :     0000000025
     
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -3, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -3, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -3, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -3, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -3, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -4, IN 2: -3, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -3, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -3
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -4, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -5, IN 2: -4, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -4, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -4
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -5, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -6, IN 2: -5, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -5, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -5
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -6, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -7, IN 2: -6, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -6, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -6
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -7, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -8, IN 2: -7, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -7, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -7
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -8, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -9, IN 2: -8, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -8, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -8
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -9, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -10, IN 2: -9, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -9, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -9
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [OUT_PTR, LEFT], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD, Arguments: [], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: ADD1, Arguments: [], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: WRITE, Arguments: [OUT, 0], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: LSHIFT, Arguments: [], Terminate: False
+    IN 1: -10, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN1_PTR, LEFT], Terminate: False
+    IN 1: -11, IN 2: -10, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [IN2_PTR, LEFT], Terminate: False
+    IN 1: -11, IN 2: -11, CARRY: -10, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
+    Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: False
+    IN 1: -11, IN 2: -11, CARRY: -11, OUT: -10
+    Input 1:     0000000018
+    Input 2:     0000000007
+    Carry  :     0000000010
+    -----------------------
+    Output :     0000000025
+    
     Step: MOVE_PTR, Arguments: [CARRY_PTR, LEFT], Terminate: True
-    IN 1: -3, IN 2: -3, CARRY: -4, OUT: -2
+    IN 1: -11, IN 2: -11, CARRY: -12, OUT: -10
     Input 1:     0000000018
     Input 2:     0000000007
     Carry  :     0000000010
