@@ -21,6 +21,7 @@ class NPI():
         self.bsz, self.npi_core_dim, self.npi_core_layers = core.bsz, npi_core_dim, npi_core_layers
         self.env_in, self.arg_in, self.prg_in = core.env_in, core.arg_in, core.prg_in
         self.state_encoding, self.program_embedding = core.state_encoding, core.program_embedding
+        self.embedding_matrix = core.embedding_matrix
         self.num_args, self.arg_depth = config["ARGUMENT_NUM"], config["ARGUMENT_DEPTH"]
         self.num_progs, self.key_dim = config["PROGRAM_NUM"], config["PROGRAM_KEY_SIZE"]
         self.log_path, self.verbose = log_path, verbose
