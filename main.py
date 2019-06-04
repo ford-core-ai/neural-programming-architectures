@@ -48,7 +48,7 @@ def main(_):
 
         # Evaluate Model
         if FLAGS.do_eval:
-            evaluate_bubblesort()
+            evaluate_bubblesort(verbose=True)
 
 
 if __name__ == "__main__":

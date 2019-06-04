@@ -22,7 +22,7 @@ def generate_bubblesort(prefix, num_examples, debug=False, maximum=10000000000, 
     """
     data = []
     for i in range(num_examples):
-        array = np.random.randint(10, size=10)
+        array = np.random.randint(10, size=5)
         if debug and i % debug_every == 0:
             trace = Trace(array, True).trace
         else:

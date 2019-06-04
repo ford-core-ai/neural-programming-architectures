@@ -9,7 +9,7 @@ import sys
 import time
 
 CONFIG = {
-    "ENVIRONMENT_LEN": 10,        # 10-element long array for bubble sort task
+    "ENVIRONMENT_LEN": 5,        # 10-element long array for bubble sort task
     "ENVIRONMENT_DEPTH": 11,      # Size of each element vector => One-Hot, Options: 0-9, OOB (10)
 
     "ARGUMENT_NUM": 3,            # Maximum Number of Program Arguments

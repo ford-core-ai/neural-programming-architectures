@@ -6,7 +6,7 @@ the precomputed data.
 """
 from model.npi import NPI
 from tasks.bubblesort.bubblesort import BubbleSortCore
-from tasks.bubblesort.env.config import CONFIG, get_args, ScratchPad, PROGRAM_SET, PROGRAM_ID as P
+from tasks.bubblesort.env.config import CONFIG, get_args, ScratchPad, PROGRAM_SET
 import pickle
 import tensorflow as tf
 import numpy as np
@@ -76,11 +76,7 @@ def train_bubblesort(epochs, verbose=0):
                     prog_in, prog_out = [[prog_in_id]], [prog_out_id]
                     term_out = [1] if term_out else [0]
 
-                    if i % 100 == 0:
-                        print("prog: |" + "  " * len(state_stack), prog_name)
-                        # print("env: ", env_in)
-                        # print("arg: ", arg_in)
-                        # print("state: ", state_stack[-1])
+                    temp = len(state_stack)
 
                     # reset state if we recurse
                     if prog_name == "BUBBLESORT":
@@ -95,6 +91,12 @@ def train_bubblesort(epochs, verbose=0):
                         state_stack.pop()
                         # print("state pop")
                         # print("stack len: ", len(state_stack))
+
+                    if i % 100 == 0:
+                        print("prog: |" + "  " * temp, prog_name)
+                        # print("env: ", env_in)
+                        # print("arg: ", arg_in)
+                        # print("state: ", state_stack[-1])
 
                     # Fit!
                     if prog_out_id == PTR_PID or prog_out_id == SWAP_PID:
@@ -142,4 +144,4 @@ def train_bubblesort(epochs, verbose=0):
                               arg2_acc / num_args))
 
             # Save Model
-            saver.save(sess, 'tasks/addition/log/model.ckpt', global_step=len(data)*ep)
+            saver.save(sess, 'tasks/bubblesort/log/model.ckpt', global_step=len(data)*ep)
