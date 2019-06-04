@@ -32,6 +32,13 @@ class Trace():
         trace_ans = self.scratch.scratchpad
         assert((true_ans == trace_ans).all())
 
+    def construct(self, prog_name, prog_id, args, term):
+        # print(prog_id, prog_name, args)
+        self.scratch.execute(prog_id, args)
+        env = self.scratch.get_env()
+        # print(self.scratch.pretty_print())
+        self.trace.append((env, (prog_name, prog_id), args, term))
+
     def build(self):
         """
         Builds execution trace, adding individual steps to the instance variable trace. Each
@@ -45,75 +52,53 @@ class Trace():
 
     def bubble(self):
         # Recurse into Bubble Subroutine
-        self.trace.append(((BUBBLESORT, P[BUBBLESORT]), [], False))
-        self.trace.append(((BUBBLE, P[BUBBLE]), [], False))
-        # self.scratch.prep()
+        self.construct(BUBBLESORT, P[BUBBLESORT], [], False)
+        self.construct(BUBBLE, P[BUBBLE], [], False)
 
-        self.trace.append(((BSTEP, P[BSTEP]), [], False))
+        self.construct(BSTEP, P[BSTEP], [], False)
         self.bstep()
-        self.trace.append(((RETURN, P[RETURN]), [], False))
+        self.construct(RETURN, P[RETURN], [], False)
 
     def bstep(self):
-        self.trace.append(((COMPSWAP, P[COMPSWAP]), [], False))
-        swap = self.scratch.compswap(debug=self.debug)
+        self.construct(COMPSWAP, P[COMPSWAP], [], False)
 
-        if swap:
-            self.trace.append(((SWAP, P[SWAP]), [VAL1_PTR, VAL2_PTR], False))
+        if self.scratch.swap():
+            self.construct(SWAP, P[SWAP], [VAL1_PTR, VAL2_PTR], False)
 
-        self.trace.append(((RSHIFT, P[RSHIFT]), [], False))
-        self.trace.append(((PTR, P[PTR]), [VAL1_PTR, RIGHT], False))
-        self.trace.append(((PTR, P[PTR]), [VAL2_PTR, RIGHT], False))
-        self.trace.append(((BSTEP, P[BSTEP]), [], False))
-        ptr2, length = self.scratch.rshift()
-        if ptr2 < length:
+        self.construct(RSHIFT, P[RSHIFT], [], False)
+        self.construct(PTR, P[PTR], [VAL1_PTR, RIGHT], False)
+        self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
+
+        self.construct(BSTEP, P[BSTEP], [], False)
+        if self.scratch.bstep():
             self.bstep()
-        self.trace.append(((RETURN, P[RETURN]), [], False))
-
-    # def reset(self):
-    #     self.trace.append(((RESET, P[RESET]), [], False))
-    #     self.trace.append(((LSHIFT, P[LSHIFT]), [], False))
-    #     steps = self.scratch.reset()
-    #
-    #     for _ in range(steps):
-    #         self.lshift()
-    #
-    #     for _ in range(steps):
-    #         self.trace.append(((RETURN, P[RETURN]), [], False))
-    #
-    #     self.trace.append(((RETURN, P[RETURN]), [], False))
-    #
-    #     if self.scratch.done():
-    #         self.trace.append(((PTR, P[PTR]), [ITER_PTR, RIGHT], True))
-    #     else:
-    #         self.trace.append(((PTR, P[PTR]), [ITER_PTR, RIGHT], False))
+        self.construct(RETURN, P[RETURN], [], False)
 
     def reset(self):
-        self.trace.append(((RESET, P[RESET]), [], False))
-        self.trace.append(((LSHIFT, P[LSHIFT]), [], False))
+        self.construct(RESET, P[RESET], [], False)
+        self.construct(LSHIFT, P[LSHIFT], [], False)
         self.lshift()
-        self.trace.append(((RETURN, P[RETURN]), [], False))
+        self.construct(RETURN, P[RETURN], [], False)
 
-        self.trace.append(((RSHIFT, P[RSHIFT]), [], False))
-        self.trace.append(((PTR, P[PTR]), [VAL1_PTR, RIGHT], False))
-        self.trace.append(((PTR, P[PTR]), [VAL2_PTR, RIGHT], False))
-        self.scratch.rshift()
-        self.scratch.iter_ptr += 1
+        self.construct(RSHIFT, P[RSHIFT], [], False)
+        self.construct(PTR, P[PTR], [VAL1_PTR, RIGHT], False)
+        self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
 
         if self.scratch.done():
-            self.trace.append(((PTR, P[PTR]), [ITER_PTR, RIGHT], True))
+            self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
         else:
-            self.trace.append(((PTR, P[PTR]), [ITER_PTR, RIGHT], False))
+            self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
 
     def lshift(self):
         # Move Val1 Pointer Left
-        self.trace.append(((PTR, P[PTR]), [VAL1_PTR, LEFT], False))
+        self.construct(PTR, P[PTR], [VAL1_PTR, LEFT], False)
 
         # Move Val2 Pointer Left
-        self.trace.append(((PTR, P[PTR]), [VAL2_PTR, LEFT], False))
+        self.construct(PTR, P[PTR], [VAL2_PTR, LEFT], False)
 
-        self.trace.append(((LSHIFT, P[LSHIFT]), [], False))
+        self.construct(LSHIFT, P[LSHIFT], [], False)
 
-        ptr1 = self.scratch.lshift()
-        if 0 <= ptr1:
+        if self.scratch.lshift():
             self.lshift()
-        self.trace.append(((RETURN, P[RETURN]), [], False))
+        # exit recursion
+        self.construct(RETURN, P[RETURN], [], False)

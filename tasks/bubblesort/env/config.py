@@ -57,39 +57,28 @@ class ScratchPad():           # Addition Environment
             self.scratchpad[i] = value
 
     def done(self):
-        if self.iter_ptr == self.length:
+        if self.iter_ptr == self.length - 1:
             return True
         else:
             return False
 
-    # def prep(self):
-    #     self.val2_ptr += 1
-    #     self.ptrs = [self.val1_ptr, self.val2_ptr, self.iter_ptr]
-
-    def compswap(self, debug=False):
+    def swap(self):
         if self[self.val1_ptr] > self[self.val2_ptr]:
-            temp = self[self.val1_ptr]
-            self[self.val1_ptr] = self[self.val2_ptr]
-            self[self.val2_ptr] = temp
-            if debug:
-                self.pretty_print()
             return True
         else:
-            if debug:
-                self.pretty_print()
             return False
 
-    def rshift(self):
-        self.val1_ptr += 1
-        self.val2_ptr += 1
-        self.ptrs = [self.val1_ptr, self.val2_ptr, self.iter_ptr]
-        return self.val2_ptr, self.length
+    def bstep(self):
+        if self.val2_ptr < self.length:
+            return True
+        else:
+            return False
 
     def lshift(self):
-        self.val1_ptr -= 1
-        self.val2_ptr -= 1
-        self.ptrs = [self.val1_ptr, self.val2_ptr, self.iter_ptr]
-        return self.val1_ptr
+        if 0 <= self.val1_ptr:
+            return True
+        else:
+            return False
 
     def reset(self):
         temp = self.val1_ptr
@@ -136,11 +125,10 @@ class ScratchPad():           # Addition Environment
             else:
                 raise NotImplementedError
             self.ptrs = [self.val1_ptr, self.val2_ptr, self.iter_ptr]
-        elif prog_id == 1:             # SWAP!
-            ptr1, ptr2 = args
-            temp = self[ptr1]
-            self[ptr1] = self[ptr2]
-            self[ptr2] = temp
+        elif prog_id == 1:              # SWAP!
+            temp = self[self.val1_ptr]
+            self[self.val1_ptr] = self[self.val2_ptr]
+            self[self.val2_ptr] = temp
 
     def __getitem__(self, item):
         return self.scratchpad[item]

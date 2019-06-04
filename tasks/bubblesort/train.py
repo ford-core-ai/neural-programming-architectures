@@ -63,7 +63,7 @@ def train_bubblesort(epochs, verbose=0):
                 step_def_loss, step_arg_loss, term_acc, prog_acc, = 0.0, 0.0, 0.0, 0.0
                 arg0_acc, arg1_acc, arg2_acc, num_args = 0.0, 0.0, 0.0, 0
                 for j in range(len(x)):
-                    (prog_name, prog_in_id), arg, term = x[j]
+                    env_in, (prog_name, prog_in_id), arg, term = x[j]
                     (_, prog_out_id), arg_out, term_out = y[j]
 
                     # Update Environment if MOVE or WRITE
@@ -71,7 +71,7 @@ def train_bubblesort(epochs, verbose=0):
                         scratch.execute(prog_in_id, arg)
 
                     # Get Environment, Argument Vectors
-                    env_in = [scratch.get_env()]
+                    # env_in = [scratch.get_env()]
                     arg_in, arg_out = [get_args(arg, arg_in=True)], get_args(arg_out, arg_in=False)
                     prog_in, prog_out = [[prog_in_id]], [prog_out_id]
                     term_out = [1] if term_out else [0]

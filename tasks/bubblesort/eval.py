@@ -84,6 +84,27 @@ def inference(session, npi, array, verbose=False):
         if prog_id == PTR_PID or prog_id == SWAP_PID:
             scratch.execute(prog_id, arg)
 
+        # control lstm state
+        if prog_name == "BUBBLESORT":
+            states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
+            state_stack = [states]
+            print("stack reset")
+        elif prog_name == "BSTEP" or prog_name == "LSHIFT":
+            states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
+            state_stack.append(states)
+            print("new state")
+        elif prog_name == "RETURN":
+            state_stack.pop()
+            print("pop state")
+
+        print("state stack size: ", len(state_stack))
+
+        # Get Environment, Argument Vectors
+        env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
+        t, n_p, n_args, h_states = session.run([npi.terminate, npi.program_distribution, npi.arguments, npi.h_states],
+                                               feed_dict={npi.env_in: env_in, npi.arg_in: arg_in,
+                                                          npi.prg_in: prog_in, npi.states: state_stack[-1]})
+
         if verbose:
             # Print Step Output
             if prog_id == PTR_PID:
@@ -97,30 +118,15 @@ def inference(session, npi, array, verbose=False):
 
             # Print Output & Pointers
             print('Step: %s, Arguments: %s, Terminate: %s' % (prog_name, a_str, str(term)))
-            print('VAL 1: %s, VAL 2: %s, ITER: %s' % (scratch.val1_ptr,
+            print('PTR 1: %s, PTR 2: %s, ITER: %s' % (scratch.val1_ptr,
                                                       scratch.val2_ptr,
                                                       scratch.iter_ptr))
+            print('VAL 1: %s, VAL 2: %s, DONE: %s' % (np.argmax(env_in[0][0:11]),
+                                                      np.argmax(env_in[0][11:22]),
+                                                      env_in[0][22]))
 
             # Print Environment
             scratch.pretty_print()
-
-        # control lstm state
-        if prog_name == "BUBBLESORT":
-            states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
-            state_stack = [states]
-        elif prog_name == "BSTEP" or prog_name == "LSHIFT":
-            states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
-            state_stack.append(states)
-        elif prog_name == "RETURN":
-            state_stack.pop()
-
-        # Get Environment, Argument Vectors
-        env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
-        t, n_p, n_args, h_states = session.run([npi.terminate, npi.program_distribution, npi.arguments, npi.h_states],
-                                               feed_dict={npi.env_in: env_in, npi.arg_in: arg_in,
-                                                          npi.prg_in: prog_in, npi.states: state_stack[-1]})
-
-        print("env: %i %i %i" % (np.argmax(env_in[0][0:11]), np.argmax(env_in[0][11:22]), env_in[0][22]))
 
         state_stack[-1] = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
 
