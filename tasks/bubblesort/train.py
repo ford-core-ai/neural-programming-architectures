@@ -91,10 +91,11 @@ def train_bubblesort(epochs, verbose=0):
                 # print(prog_out)
                 # print(term_out)
                 # print(args_out)
+                # print(prog_name)
 
                 # Fit!
-                loss, t_acc, p_acc, a_acc, _, t_loss, p_loss, a_loss, a, b = sess.run(
-                    [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.arg_train_op, npi.t_loss, npi.p_loss, npi.a_losses, npi.program_distribution, npi.y_prog],
+                loss, t_acc, p_acc, a_acc, _ = sess.run(
+                    [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.arg_train_op],
                     feed_dict={npi.env_in: env_in, npi.arg_in: [args_in], npi.prg_in: prog_in,
                                npi.y_prog: prog_out, npi.y_term: term_out,
                                npi.y_args[0]: [args_out[0, :, :]], npi.y_args[1]: [args_out[1, :, :]],

@@ -102,7 +102,7 @@ def inference(session, npi, array, verbose=False):
         # Get Environment, Argument Vectors
         env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
         t, n_p, n_args, h_states = session.run([npi.terminate, npi.program_distribution, npi.arguments, npi.h_states],
-                                               feed_dict={npi.env_in: env_in, npi.arg_in: arg_in,
+                                               feed_dict={npi.env_in: [env_in], npi.arg_in: [arg_in],
                                                           npi.prg_in: prog_in, npi.states: state_stack[-1]})
 
         if verbose:

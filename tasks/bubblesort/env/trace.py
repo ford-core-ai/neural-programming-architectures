@@ -41,15 +41,15 @@ class Trace():
         env = self.scratch.get_env()
         # print(self.scratch.pretty_print())
         self.trace[-1].append([env, prog_name, prog_id, args, term])
-        if prog_name in ["BSTEP", "LSHIFT"]:
+        if prog_name in ["BUBBLESORT", "BSTEP", "LSHIFT"]:
             self.trace.append([])
-            self.trace[-1].append([env, prog_name, prog_id, args, term])
         elif prog_name == "RETURN":
+            self.trace[-1].append([env, prog_name, prog_id, args, term])
             self.traces.append(self.trace.pop())
 
-        if len(self.trace) == 0:
-            self.trace.append([])
-            self.trace[-1].append([env, prog_name, prog_id, args, term])
+        # if len(self.trace) == 0:
+        #     self.trace.append([])
+        #     self.trace[-1].append([env, prog_name, prog_id, args, term])
 
     def build(self):
         """
@@ -61,6 +61,8 @@ class Trace():
         while not self.scratch.done():
             self.bubble()
             self.reset()
+        for _ in self.trace:
+            self.construct(RETURN, P[RETURN], [], False)
 
     def bubble(self):
         # Recurse into Bubble Subroutine
@@ -100,7 +102,7 @@ class Trace():
             self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
         else:
             self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
-        self.construct(RETURN, P[RETURN], [], False)
+        # self.construct(RETURN, P[RETURN], [], False)
 
     def lshift(self):
         # Move Val1 Pointer Left
