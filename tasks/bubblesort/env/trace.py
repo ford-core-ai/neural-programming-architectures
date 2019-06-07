@@ -21,10 +21,13 @@ class Trace():
         parameters.
         """
         self.array, self.debug = copy.deepcopy(array), debug
-        self.trace, self.scratch = [], ScratchPad(array)
+        self.trace, self.scratch = [[]], ScratchPad(array)
+        self.traces = []
 
         # Build Execution Trace
         self.build()
+        # for trace in self.traces:
+        #     print(trace)
 
         # Check answer
         self.array.sort()
@@ -37,7 +40,16 @@ class Trace():
         self.scratch.execute(prog_id, args)
         env = self.scratch.get_env()
         # print(self.scratch.pretty_print())
-        self.trace.append((env, (prog_name, prog_id), args, term))
+        self.trace[-1].append([env, prog_name, prog_id, args, term])
+        if prog_name in ["BSTEP", "LSHIFT"]:
+            self.trace.append([])
+            self.trace[-1].append([env, prog_name, prog_id, args, term])
+        elif prog_name == "RETURN":
+            self.traces.append(self.trace.pop())
+
+        if len(self.trace) == 0:
+            self.trace.append([])
+            self.trace[-1].append([env, prog_name, prog_id, args, term])
 
     def build(self):
         """
@@ -88,6 +100,7 @@ class Trace():
             self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
         else:
             self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
+        self.construct(RETURN, P[RETURN], [], False)
 
     def lshift(self):
         # Move Val1 Pointer Left

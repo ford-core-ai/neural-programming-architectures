@@ -24,10 +24,10 @@ def generate_bubblesort(prefix, num_examples, debug=False, maximum=10000000000, 
     for i in range(num_examples):
         array = np.random.randint(10, size=5)
         if debug and i % debug_every == 0:
-            trace = Trace(array, True).trace
+            traces = Trace(array, True).traces
         else:
-            trace = Trace(array).trace
-        data.append((array, trace))
+            traces = Trace(array).traces
+        data.extend(traces)
 
     # print(data)
     with open('tasks/bubblesort/data/{}.pik'.format(prefix), 'wb') as f:

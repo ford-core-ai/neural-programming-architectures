@@ -26,13 +26,10 @@ class NPI():
         self.num_progs, self.key_dim = config["PROGRAM_NUM"], config["PROGRAM_KEY_SIZE"]
         self.log_path, self.verbose = log_path, verbose
 
-        # Setup LSTM State Control
-        self.lstm_stateful = True
-
         # Setup Label Placeholders
-        self.y_term = tf.placeholder(tf.int64, shape=[None], name='Termination_Y')
-        self.y_prog = tf.placeholder(tf.int64, shape=[None], name='Program_Y')
-        self.y_args = [tf.placeholder(tf.int64, shape=[None, self.arg_depth],
+        self.y_term = tf.placeholder(tf.int64, shape=[None, None], name='Termination_Y')
+        self.y_prog = tf.placeholder(tf.int64, shape=[None, None], name='Program_Y')
+        self.y_args = [tf.placeholder(tf.int64, shape=[None, None, self.arg_depth],
                                       name='Arg{}_Y'.format(str(i))) for i in range(self.num_args)]
 
         # Build NPI LSTM Core, hidden state
@@ -94,22 +91,21 @@ class NPI():
         p_in = self.program_embedding                            # Shape: [bsz, 1, program_dim]
 
         # Reshape state_in
-        s_in = tf.expand_dims(s_in, axis=1)    # Shape: [bsz, 1, state_dim]
+        # s_in = tf.expand_dims(s_in, axis=1)    # Shape: [bsz, 1, state_dim]
 
         # Concatenate s_in, p_in
-        c = tf.concat([s_in, p_in], axis=2)        # Shape: [bsz, 1, state + prog]
+        outputs = tf.concat([s_in, p_in], axis=-1)        # Shape: [bsz, 1, state + prog]
 
         # Feed through Multi-Layer LSTM
         for i in range(self.npi_core_layers):
             # c = tf.Print(c, [self.h_states[i]], message="before: ")
-            rnn = tf.keras.layers.LSTMCell(self.npi_core_dim)
-            c, self.h_states[i] = rnn(c, self.h_states[i])
+            rnn = tf.keras.layers.CuDNNLSTM(self.npi_core_dim, return_sequences=True)
+            outputs = rnn(outputs, self.h_states[i])
             # c = tf.Print(c, [self.h_states[i]], message="after: ")
-
         # Return Top-Most LSTM H-State
-        top_state = tf.split(c, [-1, 1], axis=1)[1]
-        top_state = tf.squeeze(top_state, axis=1)
-        return top_state                                         # Shape: [bsz, npi_core_dim]
+        # top_state = tf.split(outputs, [-1, 1], axis=1)[1]
+        # top_state = tf.squeeze(top_state, axis=1)
+        return outputs                                         # Shape: [bsz, npi_core_dim]
 
     def terminate_net(self):
         """
@@ -137,10 +133,10 @@ class NPI():
                                     kernel_initializer=tf.truncated_normal_initializer)(hidden)  # Shape: [bsz, key_dim]
 
         # Perform dot product operation, then softmax over all options to generate distribution
-        key = tf.reshape(key, [-1, 1, self.key_dim])
-        key = tf.tile(key, [1, self.num_progs, 1])             # Shape: [bsz, n_progs, key_dim]
+        key = tf.reshape(key, [self.bsz, -1,  1, self.key_dim])
+        key = tf.tile(key, [1, 1, self.num_progs, 1])             # Shape: [bsz, n_progs, key_dim]
         prog_sim = tf.multiply(key, self.core.program_key)          # Shape: [bsz, n_progs, key_dim]
-        prog_dist = tf.reduce_sum(prog_sim, [2])               # Shape: [bsz, n_progs]
+        prog_dist = tf.reduce_sum(prog_sim, [-1])               # Shape: [bsz, n_progs]
         return prog_dist
 
     def argument_net(self):
@@ -184,18 +180,18 @@ class NPI():
         """
         Build accuracy metrics for each of the sub-networks.
         """
-        term_metric = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.terminate, 1),
+        term_metric = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.terminate, -1),
                                                       self.y_term),
                                              tf.float32), name='Termination_Accuracy')
 
-        program_metric = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.program_distribution, 1),
+        program_metric = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.program_distribution, -1),
                                                          self.y_prog),
                                                 tf.float32), name='Program_Accuracy')
 
         arg_metrics = []
         for i in range(self.num_args):
             arg_metrics.append(tf.reduce_mean(
-                tf.cast(tf.equal(tf.argmax(self.arguments[i], 1), tf.argmax(self.y_args[i], 1)),
+                tf.cast(tf.equal(tf.argmax(self.arguments[i], -1), tf.argmax(self.y_args[i], -1)),
                         tf.float32), name='Argument{}_Accuracy'.format(str(i))))
 
         return term_metric, program_metric, arg_metrics
