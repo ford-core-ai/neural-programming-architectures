@@ -24,10 +24,13 @@ class Trace():
         self.trace, self.scratch = [[]], ScratchPad(array)
         self.traces = []
 
+        print("=" * 40)
         # Build Execution Trace
         self.build()
-        # for trace in self.traces:
-        #     print(trace)
+        for trace in self.traces:
+            print("~" * 20)
+            for step in trace:
+                print(step[1], step[-1])
 
         # Check answer
         self.array.sort()
@@ -43,8 +46,9 @@ class Trace():
         self.trace[-1].append([env, prog_name, prog_id, args, term])
         if prog_name in ["BUBBLESORT", "BSTEP", "LSHIFT"]:
             self.trace.append([])
-        elif prog_name == "RETURN":
             self.trace[-1].append([env, prog_name, prog_id, args, term])
+        elif prog_name == "RETURN":
+            # self.trace[-1].append([env, prog_name, prog_id, args, term])
             self.traces.append(self.trace.pop())
 
         # if len(self.trace) == 0:
@@ -97,11 +101,17 @@ class Trace():
         self.construct(RSHIFT, P[RSHIFT], [], False)
         self.construct(PTR, P[PTR], [VAL1_PTR, RIGHT], False)
         self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
+        self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
 
+        # self.scratch.iter_ptr += 1
         if self.scratch.done():
-            self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
-        else:
-            self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
+            self.construct(RETURN, P[RETURN], [], True)
+
+            # self.scratch.iter_ptr -= 1
+            # self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
+        # else:
+            # self.scratch.iter_ptr -= 1
+            # self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
         # self.construct(RETURN, P[RETURN], [], False)
 
     def lshift(self):

@@ -52,6 +52,7 @@ def repl(session, npi, data, verbose=False):
     if inpt == "":
         correct_count = 0
         for array, _ in tqdm(data):
+            # array = data[10][0]
             result = inference(session, npi, array, verbose=verbose)
             correct_count += int(result)
 
@@ -82,22 +83,26 @@ def inference(session, npi, array, verbose=False):
     while True:
         # Update Environment if MOVE or WRITE
         if prog_id == PTR_PID or prog_id == SWAP_PID:
+            # print(arg)
             scratch.execute(prog_id, arg)
+        # print(prog_name)
 
         # control lstm state
         if prog_name == "BUBBLESORT":
             states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
             state_stack = [states]
-            print("stack reset")
+            # print("stack reset")
         elif prog_name == "BSTEP" or prog_name == "LSHIFT":
             states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
             state_stack.append(states)
-            print("new state")
+            # print("new state")
         elif prog_name == "RETURN":
             state_stack.pop()
-            print("pop state")
+            # print("pop state")
 
-        print("state stack size: ", len(state_stack))
+        # print("state stack size: ", len(state_stack))
+
+        # print(state_stack[-1])
 
         # Get Environment, Argument Vectors
         env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
@@ -121,14 +126,16 @@ def inference(session, npi, array, verbose=False):
             print('PTR 1: %s, PTR 2: %s, ITER: %s' % (scratch.val1_ptr,
                                                       scratch.val2_ptr,
                                                       scratch.iter_ptr))
-            print('VAL 1: %s, VAL 2: %s, DONE: %s' % (np.argmax(env_in[0][0:11]),
-                                                      np.argmax(env_in[0][11:22]),
-                                                      env_in[0][22]))
+            print('VAL 1: %s, VAL 2: %s, DONE: %s' % (scratch[scratch.val1_ptr],
+                                                      scratch[scratch.val2_ptr],
+                                                      env_in[0][3]))
 
             # Print Environment
             scratch.pretty_print()
 
         state_stack[-1] = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
+
+        # print(state_stack[-1])
 
         if np.argmax(t) == 1:
             # Update Environment if MOVE or WRITE
@@ -139,7 +146,7 @@ def inference(session, npi, array, verbose=False):
             model.sort()
 
             output = scratch.scratchpad
-            result = output == model
+            result = (output == model).all()
 
             if verbose:
                 print('Step: %s, Arguments: %s, Terminate: %s' % (prog_name, a_str, str(True)))
@@ -165,6 +172,6 @@ def inference(session, npi, array, verbose=False):
                 arg = []
             term = False
 
-        input("pause")
+        # input("pause")
 
     return result

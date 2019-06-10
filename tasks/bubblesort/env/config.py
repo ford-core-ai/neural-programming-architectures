@@ -47,7 +47,7 @@ class ScratchPad():           # Addition Environment
         self.init_scratchpad(array)
 
         # Pointers initially all start at the right
-        self.val1_ptr, self.val2_ptr, self.iter_ptr = self.ptrs = [0, 1, 0]
+        self.val1_ptr, self.val2_ptr, self.iter_ptr = self.ptrs = [0, 1, 1]
 
     def init_scratchpad(self, array):
         """
@@ -57,7 +57,7 @@ class ScratchPad():           # Addition Environment
             self.scratchpad[i] = value
 
     def done(self):
-        if self.iter_ptr == self.length - 1:
+        if self.iter_ptr == self.length:
             return True
         else:
             return False
@@ -95,21 +95,16 @@ class ScratchPad():           # Addition Environment
         sys.stdout.flush()
 
     def get_env(self):
-        env = np.zeros((2, CONFIG["ENVIRONMENT_DEPTH"]), dtype=np.int32)
-        if self.val1_ptr < 0 or CONFIG["ENVIRONMENT_LEN"] <= self.val1_ptr:
-            env[0][10] = 1
-        else:
-            env[0][self[self.val1_ptr]] = 1
-        if self.val2_ptr < 0 or CONFIG["ENVIRONMENT_LEN"] <= self.val2_ptr:
-            env[1][10] = 1
-        else:
-            env[1][self[self.val2_ptr]] = 1
+        env = np.zeros((4,), dtype=np.int32)
+        if 0 <= self.val1_ptr < CONFIG["ENVIRONMENT_LEN"]:
+            env[1] = 1
+        if 0 <= self.val2_ptr < CONFIG["ENVIRONMENT_LEN"]:
+            env[2] = 1
+        if env[1] == 1 and env[2] == 1:
+            if self[self.val1_ptr] <= self[self.val2_ptr]:
+                env[0] = 1
         if self.iter_ptr == self.length:
-            done = np.array([1])
-            env = np.concatenate([env.flatten(), done])
-        else:
-            done = np.array([0])
-            env = np.concatenate([env.flatten(), done])
+            env[3] = 1
         return env
 
     def execute(self, prog_id, args):
@@ -131,7 +126,10 @@ class ScratchPad():           # Addition Environment
             self[self.val2_ptr] = temp
 
     def __getitem__(self, item):
-        return self.scratchpad[item]
+        if 0 <= item < self.scratchpad.size:
+            return self.scratchpad[item]
+        else:
+            return -1
 
     def __setitem__(self, key, value):
         self.scratchpad[key] = value

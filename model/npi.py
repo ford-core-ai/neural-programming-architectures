@@ -36,9 +36,12 @@ class NPI():
         self.states = tf.placeholder(tf.float32, shape=[self.npi_core_layers, self.bsz, 2*self.npi_core_dim],
                                      name='LSTM_States')
         self.h_states = []
+        self.c_states = []
         self.split_states = tf.split(self.states, self.npi_core_layers, axis=0)
         for split_state in self.split_states:
             self.h_states.append(tf.split(tf.squeeze(split_state, axis=0), 2, axis=-1))
+            self.c_states.append(tf.split(tf.squeeze(split_state, axis=0), 2, axis=-1)[1])
+        print(self.h_states)
 
         self.h = self.npi_core()
 
@@ -98,10 +101,13 @@ class NPI():
 
         # Feed through Multi-Layer LSTM
         for i in range(self.npi_core_layers):
-            # c = tf.Print(c, [self.h_states[i]], message="before: ")
-            rnn = tf.keras.layers.CuDNNLSTM(self.npi_core_dim, return_sequences=True)
-            outputs = rnn(outputs, self.h_states[i])
-            # c = tf.Print(c, [self.h_states[i]], message="after: ")
+            # outputs = tf.Print(outputs, [self.h_states[i]], message="before: ")
+            rnn = tf.keras.layers.CuDNNLSTM(self.npi_core_dim, return_sequences=True, return_state=True)
+            outputs, self.h_states[i][0], self.h_states[i][1] = rnn(outputs, initial_state=self.h_states[i])
+            # print(outputs)
+            # last_state = tf.split(outputs, [-1, 1], axis=1)[1]
+            # self.h_states[i] = tf.squeeze(last_state, axis=1)
+            # outputs = tf.Print(outputs, [self.h_states[i]], message="after: ")
         # Return Top-Most LSTM H-State
         # top_state = tf.split(outputs, [-1, 1], axis=1)[1]
         # top_state = tf.squeeze(top_state, axis=1)
@@ -130,13 +136,17 @@ class NPI():
                                        kernel_regularizer=tf.keras.regularizers.l2,
                                        bias_regularizer=tf.keras.regularizers.l2)(self.h)
         key = tf.keras.layers.Dense(self.key_dim,
-                                    kernel_initializer=tf.truncated_normal_initializer)(hidden)  # Shape: [bsz, key_dim]
+                                    kernel_initializer=tf.truncated_normal_initializer)(hidden)
+        # Shape: [bsz, n_progs, key_dim]
 
         # Perform dot product operation, then softmax over all options to generate distribution
-        key = tf.reshape(key, [self.bsz, -1,  1, self.key_dim])
-        key = tf.tile(key, [1, 1, self.num_progs, 1])             # Shape: [bsz, n_progs, key_dim]
-        prog_sim = tf.multiply(key, self.core.program_key)          # Shape: [bsz, n_progs, key_dim]
-        prog_dist = tf.reduce_sum(prog_sim, [-1])               # Shape: [bsz, n_progs]
+        # key = tf.reshape(key, [self.bsz, -1,  1, self.key_dim])     # Shape: [bsz, seq_len, 1, key_dim]
+        # key = tf.tile(key, [1, 1, self.num_progs, 1])               # Shape: [bsz, seq_len, n_progs, key_dim]
+        # prog_sim = tf.multiply(key, self.core.program_key)          # Shape: [bsz, seq_len, n_progs, key_dim]
+        # prog_dist = tf.reduce_sum(prog_sim, [-1])                   # Shape: [bsz, seq_len, n_progs]
+        key = tf.reshape(key, [-1, self.key_dim])
+        prog_dist = tf.matmul(key, tf.transpose(self.core.program_key))
+        prog_dist = tf.reshape(prog_dist, [self.bsz, -1, self.num_progs])
         return prog_dist
 
     def argument_net(self):

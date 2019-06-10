@@ -59,7 +59,7 @@ def train_bubblesort(epochs, verbose=0):
                 x, y = steps[:-1], steps[1:]
 
                 env_in, prog_name, prog_in_id, args_in, term = list(map(list, zip(*x)))
-                _, _, prog_out_id, args_out, term_out = list(map(list, zip(*y)))
+                _, prog_name_out, prog_out_id, args_out, term_out = list(map(list, zip(*y)))
 
                 env_in = np.array(env_in)
                 env_in = np.expand_dims(env_in, axis=0)
@@ -73,6 +73,7 @@ def train_bubblesort(epochs, verbose=0):
                 args_out = np.transpose(args_out, (1, 0, 2))
                 # args_out = np.expand_dims(args_out, axis=0)
 
+                # print(env_in)
                 # print(args_in)
                 # print(args_out)
 
@@ -91,11 +92,12 @@ def train_bubblesort(epochs, verbose=0):
                 # print(prog_out)
                 # print(term_out)
                 # print(args_out)
-                # print(prog_name)
+                # print('in: ', prog_name)
+                # print('out: ', prog_name_out)
 
                 # Fit!
-                loss, t_acc, p_acc, a_acc, _ = sess.run(
-                    [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.arg_train_op],
+                loss, t_acc, p_acc, a_acc, _, a = sess.run(
+                    [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.arg_train_op, npi.core.program_key],
                     feed_dict={npi.env_in: env_in, npi.arg_in: [args_in], npi.prg_in: prog_in,
                                npi.y_prog: prog_out, npi.y_term: term_out,
                                npi.y_args[0]: [args_out[0, :, :]], npi.y_args[1]: [args_out[1, :, :]],
@@ -107,6 +109,8 @@ def train_bubblesort(epochs, verbose=0):
                 arg1_acc += a_acc[1]/100
                 arg2_acc += a_acc[2]/100
                 num_args += len(x)
+
+                # print(a)
 
                 # print(t_acc)
                 # print(term_out.shape)
@@ -123,7 +127,7 @@ def train_bubblesort(epochs, verbose=0):
                 if i % 100 == 0:
                     print("Epoch {0:02d} Step {1:03d} " \
                           "Argument Step Loss {2:05f}, Term: {3:03f}, Prog: {4:03f}, A0: {5:03f}, " \
-                          "A1: {6:03f}, A2: {7:03}" \
+                          "A1: {6:03f}, A2: {7:03f}" \
                           .format(ep, i, step_arg_loss / num_args, term_acc,
                                   prog_acc, arg0_acc, arg1_acc, arg2_acc))
                     step_arg_loss, term_acc, prog_acc = 0.0, 0.0, 0.0

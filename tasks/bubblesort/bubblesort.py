@@ -14,7 +14,7 @@ class BubbleSortCore():
         Instantiate an Addition Core object, with the necessary hyperparameters.
         """
         self.hidden_dim, self.state_dim, self.bsz = hidden_dim, state_dim, batch_size
-        self.env_dim = 2 * CONFIG["ENVIRONMENT_DEPTH"] + 1                      # 2 * 11 + 1 = 23
+        self.env_dim = 4
         self.arg_dim = CONFIG["ARGUMENT_NUM"] * CONFIG["ARGUMENT_DEPTH"]        # 3 * 11 = 33
         self.program_dim = CONFIG["PROGRAM_EMBEDDING_SIZE"]
 
@@ -33,7 +33,8 @@ class BubbleSortCore():
         # Build Program Matrices
         self.program_key = tf.get_variable(name='Program_Keys',
                                            shape=[CONFIG["PROGRAM_NUM"], CONFIG["PROGRAM_KEY_SIZE"]],
-                                           initializer=tf.truncated_normal_initializer)
+                                           initializer=tf.truncated_normal_initializer,
+                                           trainable=True)
         self.program_embedding = self.build_program_store()
 
     def build_encoder(self):
@@ -64,7 +65,8 @@ class BubbleSortCore():
         Reference: Reed, de Freitas [4]
         """
         self.embedding_matrix = tf.get_variable(name="Embedding_Matrix",
-                                           shape=[CONFIG["PROGRAM_NUM"], CONFIG["PROGRAM_EMBEDDING_SIZE"]],
-                                           initializer=tf.truncated_normal_initializer)
+                                                shape=[CONFIG["PROGRAM_NUM"], CONFIG["PROGRAM_EMBEDDING_SIZE"]],
+                                                initializer=tf.truncated_normal_initializer,
+                                                trainable=True)
         embedding = tf.nn.embedding_lookup(self.embedding_matrix, self.prg_in, name='Program_Embedding')
         return embedding
