@@ -24,13 +24,8 @@ class Trace():
         self.trace, self.scratch = [[]], ScratchPad(array)
         self.traces = []
 
-        print("=" * 40)
         # Build Execution Trace
         self.build()
-        for trace in self.traces:
-            print("~" * 20)
-            for step in trace:
-                print(step[1], step[-1])
 
         # Check answer
         self.array.sort()
@@ -39,21 +34,18 @@ class Trace():
         assert((true_ans == trace_ans).all())
 
     def construct(self, prog_name, prog_id, args, term):
-        # print(prog_id, prog_name, args)
+        # execute the provided program in the scratchpad
         self.scratch.execute(prog_id, args)
+        # get environment after the program has been executed
         env = self.scratch.get_env()
-        # print(self.scratch.pretty_print())
+        # add all input/output terms to trace
         self.trace[-1].append([env, prog_name, prog_id, args, term])
+        # manually control recursion for specific programs
         if prog_name in ["BUBBLESORT", "BSTEP", "LSHIFT"]:
             self.trace.append([])
             self.trace[-1].append([env, prog_name, prog_id, args, term])
         elif prog_name == "RETURN":
-            # self.trace[-1].append([env, prog_name, prog_id, args, term])
             self.traces.append(self.trace.pop())
-
-        # if len(self.trace) == 0:
-        #     self.trace.append([])
-        #     self.trace[-1].append([env, prog_name, prog_id, args, term])
 
     def build(self):
         """
@@ -73,20 +65,23 @@ class Trace():
         self.construct(BUBBLESORT, P[BUBBLESORT], [], False)
         self.construct(BUBBLE, P[BUBBLE], [], False)
 
+        # call recursive BSTEP
         self.construct(BSTEP, P[BSTEP], [], False)
         self.bstep()
         self.construct(RETURN, P[RETURN], [], False)
 
     def bstep(self):
         self.construct(COMPSWAP, P[COMPSWAP], [], False)
-
+        # optionally swap digits
         if self.scratch.swap():
             self.construct(SWAP, P[SWAP], [VAL1_PTR, VAL2_PTR], False)
 
+        # move ptrs to next array indices
         self.construct(RSHIFT, P[RSHIFT], [], False)
         self.construct(PTR, P[PTR], [VAL1_PTR, RIGHT], False)
         self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
 
+        # optionally recurse
         self.construct(BSTEP, P[BSTEP], [], False)
         if self.scratch.bstep():
             self.bstep()
@@ -94,25 +89,20 @@ class Trace():
 
     def reset(self):
         self.construct(RESET, P[RESET], [], False)
+        # recursively move ptrs back to the start of the array
         self.construct(LSHIFT, P[LSHIFT], [], False)
         self.lshift()
         self.construct(RETURN, P[RETURN], [], False)
 
+        # shift all pointers for next iteration
         self.construct(RSHIFT, P[RSHIFT], [], False)
         self.construct(PTR, P[PTR], [VAL1_PTR, RIGHT], False)
         self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
         self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
 
-        # self.scratch.iter_ptr += 1
+        # set termination flag if algorithm complete
         if self.scratch.done():
             self.construct(RETURN, P[RETURN], [], True)
-
-            # self.scratch.iter_ptr -= 1
-            # self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], True)
-        # else:
-            # self.scratch.iter_ptr -= 1
-            # self.construct(PTR, P[PTR], [ITER_PTR, RIGHT], False)
-        # self.construct(RETURN, P[RETURN], [], False)
 
     def lshift(self):
         # Move Val1 Pointer Left
@@ -121,9 +111,8 @@ class Trace():
         # Move Val2 Pointer Left
         self.construct(PTR, P[PTR], [VAL2_PTR, LEFT], False)
 
+        # optionally recurse
         self.construct(LSHIFT, P[LSHIFT], [], False)
-
         if self.scratch.lshift():
             self.lshift()
-        # exit recursion
         self.construct(RETURN, P[RETURN], [], False)

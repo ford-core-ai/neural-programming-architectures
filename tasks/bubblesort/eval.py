@@ -47,18 +47,18 @@ def evaluate_bubblesort(verbose=False):
         repl(sess, npi, data, verbose=verbose)
 
 
-def repl(session, npi, data, verbose=False):
+def repl(session, npi, data, verbose):
     inpt = input('Hit Enter to test, or type anything for more options: ')
     if inpt == "":
+        # run through test set
         correct_count = 0
         for array, _ in tqdm(data):
-            # array = data[10][0]
             result = inference(session, npi, array, verbose=verbose)
             correct_count += int(result)
 
         print("Test Accuracy: %3.2f%%" % (100 * correct_count/len(data)))
-
     else:
+        # run verbose test samples
         while True:
             inpt = input('Enter Two Numbers, or Hit Enter for Random Pair: ')
 
@@ -71,7 +71,7 @@ def repl(session, npi, data, verbose=False):
             inference(session, npi, array, verbose=True)
 
 
-def inference(session, npi, array, verbose=False):
+def inference(session, npi, array, verbose):
     # Separate steps
     if verbose:
         print("")
@@ -83,26 +83,17 @@ def inference(session, npi, array, verbose=False):
     while True:
         # Update Environment if MOVE or WRITE
         if prog_id == PTR_PID or prog_id == SWAP_PID:
-            # print(arg)
             scratch.execute(prog_id, arg)
-        # print(prog_name)
 
-        # control lstm state
+        # control recursive lstm state
         if prog_name == "BUBBLESORT":
             states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
             state_stack = [states]
-            # print("stack reset")
         elif prog_name == "BSTEP" or prog_name == "LSHIFT":
             states = np.zeros([npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
             state_stack.append(states)
-            # print("new state")
         elif prog_name == "RETURN":
             state_stack.pop()
-            # print("pop state")
-
-        # print("state stack size: ", len(state_stack))
-
-        # print(state_stack[-1])
 
         # Get Environment, Argument Vectors
         env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
@@ -135,18 +126,18 @@ def inference(session, npi, array, verbose=False):
 
         state_stack[-1] = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
 
-        # print(state_stack[-1])
-
         if np.argmax(t) == 1:
             # Update Environment if MOVE or WRITE
             if prog_id == PTR_PID or prog_id == SWAP_PID:
                 scratch.execute(prog_id, arg)
 
-            model = copy.deepcopy(array)
-            model.sort()
+            # find correct answer
+            correct = copy.deepcopy(array)
+            correct.sort()
 
+            # compare to system output
             output = scratch.scratchpad
-            result = (output == model).all()
+            result = (output == correct).all()
 
             if verbose:
                 print('Step: %s, Arguments: %s, Terminate: %s' % (prog_name, a_str, str(True)))
@@ -158,12 +149,13 @@ def inference(session, npi, array, verbose=False):
                 scratch.pretty_print()
 
                 print("Model Output: %s => %s" % (str(array), str(output)))
-                print("Correct Out : %s => %s" % (str(array), str(model)))
+                print("Correct Out : %s => %s" % (str(array), str(correct)))
                 print("Correct!" if result else "Incorrect!")
 
             break
 
         else:
+            # compute next step inputs
             prog_id = np.argmax(n_p)
             prog_name = PROGRAM_SET[prog_id][0]
             if prog_id == PTR_PID or prog_id == SWAP_PID:
@@ -171,7 +163,5 @@ def inference(session, npi, array, verbose=False):
             else:
                 arg = []
             term = False
-
-        # input("pause")
 
     return result

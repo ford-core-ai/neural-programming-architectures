@@ -80,14 +80,6 @@ class ScratchPad():           # Addition Environment
         else:
             return False
 
-    def reset(self):
-        temp = self.val1_ptr
-        self.val1_ptr = 0
-        self.val2_ptr = 1
-        self.iter_ptr += 1
-        self.ptrs = [self.val1_ptr, self.val2_ptr, self.iter_ptr]
-        return temp
-
     def pretty_print(self):
         print('Array: ', self.scratchpad)
         print('')

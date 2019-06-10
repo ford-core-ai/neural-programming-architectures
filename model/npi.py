@@ -36,12 +36,9 @@ class NPI():
         self.states = tf.placeholder(tf.float32, shape=[self.npi_core_layers, self.bsz, 2*self.npi_core_dim],
                                      name='LSTM_States')
         self.h_states = []
-        self.c_states = []
         self.split_states = tf.split(self.states, self.npi_core_layers, axis=0)
         for split_state in self.split_states:
             self.h_states.append(tf.split(tf.squeeze(split_state, axis=0), 2, axis=-1))
-            self.c_states.append(tf.split(tf.squeeze(split_state, axis=0), 2, axis=-1)[1])
-        print(self.h_states)
 
         self.h = self.npi_core()
 
@@ -73,16 +70,6 @@ class NPI():
         self.default_train_op = self.opt.minimize(self.default_loss, global_step=self.global_step)
         self.arg_train_op = self.opt.minimize(self.arg_loss, global_step=self.global_step)
 
-    # def reset_state(self):
-    #     """
-    #     Zero NPI Core LSTM Hidden States. LSTM States are represented as a Tuple, consisting of the
-    #     LSTM C State, and the LSTM H State (in that order: (c, h)).
-    #     """
-    #     zero_state = [tf.zeros([self.bsz, self.npi_core_dim]), tf.zeros([self.bsz, self.npi_core_dim])]
-    #     self.h_states = [zero_state for _ in range(self.npi_core_layers)]
-    #     self.h_states[0][0] = tf.Print(self.h_states[0][0], [self.h_states], message="states reset:")
-    #     print(self.h_states)
-
     def npi_core(self):
         """
         Build the NPI LSTM core, feeding the program embedding and state encoding to a multi-layered
@@ -90,28 +77,17 @@ class NPI():
 
         References: Reed, de Freitas [2]
         """
-        s_in = self.state_encoding                               # Shape: [bsz, state_dim]
-        p_in = self.program_embedding                            # Shape: [bsz, 1, program_dim]
-
-        # Reshape state_in
-        # s_in = tf.expand_dims(s_in, axis=1)    # Shape: [bsz, 1, state_dim]
+        s_in = self.state_encoding                               # Shape: [bsz, seq_len, state_dim]
+        p_in = self.program_embedding                            # Shape: [bsz, seq_len, program_dim]
 
         # Concatenate s_in, p_in
-        outputs = tf.concat([s_in, p_in], axis=-1)        # Shape: [bsz, 1, state + prog]
+        outputs = tf.concat([s_in, p_in], axis=-1)        # Shape: [bsz, seq_len, state + prog]
 
         # Feed through Multi-Layer LSTM
         for i in range(self.npi_core_layers):
-            # outputs = tf.Print(outputs, [self.h_states[i]], message="before: ")
             rnn = tf.keras.layers.CuDNNLSTM(self.npi_core_dim, return_sequences=True, return_state=True)
             outputs, self.h_states[i][0], self.h_states[i][1] = rnn(outputs, initial_state=self.h_states[i])
-            # print(outputs)
-            # last_state = tf.split(outputs, [-1, 1], axis=1)[1]
-            # self.h_states[i] = tf.squeeze(last_state, axis=1)
-            # outputs = tf.Print(outputs, [self.h_states[i]], message="after: ")
-        # Return Top-Most LSTM H-State
-        # top_state = tf.split(outputs, [-1, 1], axis=1)[1]
-        # top_state = tf.squeeze(top_state, axis=1)
-        return outputs                                         # Shape: [bsz, npi_core_dim]
+        return outputs                                         # Shape: [bsz, seq_len, npi_core_dim]
 
     def terminate_net(self):
         """
@@ -140,13 +116,9 @@ class NPI():
         # Shape: [bsz, n_progs, key_dim]
 
         # Perform dot product operation, then softmax over all options to generate distribution
-        # key = tf.reshape(key, [self.bsz, -1,  1, self.key_dim])     # Shape: [bsz, seq_len, 1, key_dim]
-        # key = tf.tile(key, [1, 1, self.num_progs, 1])               # Shape: [bsz, seq_len, n_progs, key_dim]
-        # prog_sim = tf.multiply(key, self.core.program_key)          # Shape: [bsz, seq_len, n_progs, key_dim]
-        # prog_dist = tf.reduce_sum(prog_sim, [-1])                   # Shape: [bsz, seq_len, n_progs]
-        key = tf.reshape(key, [-1, self.key_dim])
-        prog_dist = tf.matmul(key, tf.transpose(self.core.program_key))
-        prog_dist = tf.reshape(prog_dist, [self.bsz, -1, self.num_progs])
+        key = tf.reshape(key, [-1, self.key_dim])                               # Shape: [bsz+seq_len, key_dim]
+        prog_dist = tf.matmul(key, tf.transpose(self.core.program_key))         # Shape: [bsz+seq_len, num_progs]
+        prog_dist = tf.reshape(prog_dist, [self.bsz, -1, self.num_progs])       # Shape: [bsz, seq_len, num_progs]
         return prog_dist
 
     def argument_net(self):

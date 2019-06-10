@@ -27,7 +27,7 @@ def generate_bubblesort(prefix, num_examples, debug=False, maximum=10000000000, 
             traces = Trace(array, True).traces
         else:
             traces = Trace(array).traces
-        data.extend(traces)
+        data.append((array, traces))
 
     # print(data)
     with open('tasks/bubblesort/data/{}.pik'.format(prefix), 'wb') as f:
