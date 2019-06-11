@@ -17,7 +17,7 @@ CONFIG = {
     "ARGUMENT_DEPTH": 11,         # Size of Argument Vector => One-Hot, Options 0-9, Default (10)
     "DEFAULT_ARG_VALUE": 10,      # Default Argument Value
 
-    "PROGRAM_NUM": 6,             # Maximum Number of Subroutines
+    "PROGRAM_NUM": 7,             # Maximum Number of Subroutines
     "PROGRAM_KEY_SIZE": 5,        # Size of the Program Keys
     "PROGRAM_EMBEDDING_SIZE": 10  # Size of the Program Embeddings
 }
@@ -28,7 +28,8 @@ PROGRAM_SET = [
     ("ADD",),                 # Top-Level Add Program (calls children routines)
     ("ADD1",),                # Single-Digit (Column) Add Operation
     ("CARRY",),               # Carry Operation
-    ("LSHIFT",)               # Shifts all Pointers Left (after Single-Digit Add)
+    ("LSHIFT",),              # Shifts all Pointers Left (after Single-Digit Add)
+    ("RETURN",)               # Shifts all Pointers Left (after Single-Digit Add)
 ]
 
 PROGRAM_ID = {x[0]: i for i, x in enumerate(PROGRAM_SET)}
@@ -61,30 +62,10 @@ class ScratchPad():           # Addition Environment
             return True
         else:
             return False
-        #     lst = [x[1] for x in self.ptrs]
-        #     if len(set(lst)) == 1:
-        #         return sum(sum([self[x[0], :min(x[1] + 1, -1)] for x in self.ptrs])) == 0
-        #     else:
-        #         return False
 
     def add1(self):
         temp = self[self.in1_ptr] + self[self.in2_ptr] + self[self.carry_ptr]
         return temp % 10, int(temp / 10)
-
-    def write_carry(self, carry_val, debug=False):
-        carry_row, carry_col = self.carry_ptr
-        self[(carry_row, carry_col - 1)] = carry_val
-        if debug:
-            self.pretty_print()
-
-    def write_out(self, value, debug=False):
-        self[self.out_ptr] = value
-        if debug:
-            self.pretty_print()
-
-    def lshift(self):
-        self.in1_ptr, self.in2_ptr, self.carry_ptr, self.out_ptr = self.ptrs = \
-            [(x, y - 1) for (x, y) in self.ptrs]
 
     def pretty_print(self):
         new_strs = ["".join(map(str, self[i])) for i in range(4)]

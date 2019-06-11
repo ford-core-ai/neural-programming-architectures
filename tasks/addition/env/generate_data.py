@@ -25,9 +25,9 @@ def generate_addition(prefix, num_examples, debug=False, maximum=10000000000, de
         in1 = np.random.randint(maximum - 1)
         in2 = np.random.randint(maximum - in1)
         if debug and i % debug_every == 0:
-            trace = Trace(in1, in2, True).trace
+            trace = Trace(in1, in2, True).traces
         else:
-            trace = Trace(in1, in2).trace
+            trace = Trace(in1, in2).traces
         data.append((in1, in2, trace))
 
     # print(data)

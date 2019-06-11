@@ -19,13 +19,13 @@ class AdditionCore():
         self.program_dim = CONFIG["PROGRAM_EMBEDDING_SIZE"]
 
         # Setup Environment Input Layer
-        self.env_in = tf.placeholder(tf.float32, shape=[self.bsz, self.env_dim], name="Env_Input")
+        self.env_in = tf.placeholder(tf.float32, shape=[self.bsz, None, self.env_dim], name="Env_Input")
 
         # Setup Argument Input Layer
-        self.arg_in = tf.placeholder(tf.float32, shape=[self.bsz, self.arg_dim], name="Arg_Input")
+        self.arg_in = tf.placeholder(tf.float32, shape=[self.bsz, None, self.arg_dim], name="Arg_Input")
 
         # Setup Program ID Input Layer
-        self.prg_in = tf.placeholder(tf.int32, shape=[self.bsz, 1], name='Program_ID')
+        self.prg_in = tf.placeholder(tf.int32, shape=[self.bsz, None], name='Program_ID')
 
         # Build Environment Encoder Network (f_enc)
         self.state_encoding = self.build_encoder()
@@ -33,7 +33,8 @@ class AdditionCore():
         # Build Program Matrices
         self.program_key = tf.get_variable(name='Program_Keys',
                                            shape=[CONFIG["PROGRAM_NUM"], CONFIG["PROGRAM_KEY_SIZE"]],
-                                           initializer=tf.truncated_normal_initializer)
+                                           initializer=tf.truncated_normal_initializer,
+                                           trainable=True)
         self.program_embedding = self.build_program_store()
 
     def build_encoder(self):
@@ -47,7 +48,7 @@ class AdditionCore():
 
         Reference: Reed, de Freitas [9]
         """
-        merge = tf.concat([self.env_in, self.arg_in], 1)
+        merge = tf.concat([self.env_in, self.arg_in], -1)
         elu = tf.keras.layers.Dense(self.hidden_dim, activation=tf.nn.elu,
                                     kernel_initializer=tf.truncated_normal_initializer)(merge)
         elu = tf.keras.layers.Dense(self.hidden_dim, activation=tf.nn.elu,
@@ -63,8 +64,9 @@ class AdditionCore():
 
         Reference: Reed, de Freitas [4]
         """
-        embedding_matrix = tf.get_variable(name="Embedding_Matrix",
+        self.embedding_matrix = tf.get_variable(name="Embedding_Matrix",
                                            shape=[CONFIG["PROGRAM_NUM"], CONFIG["PROGRAM_EMBEDDING_SIZE"]],
-                                           initializer=tf.truncated_normal_initializer)
-        embedding = tf.nn.embedding_lookup(embedding_matrix, self.prg_in, name='Program_Embedding')
+                                           initializer=tf.truncated_normal_initializer,
+                                           trainable=True)
+        embedding = tf.nn.embedding_lookup(self.embedding_matrix, self.prg_in, name='Program_Embedding')
         return embedding

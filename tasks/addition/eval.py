@@ -83,6 +83,12 @@ def inference(session, npi, x, y, verbose=False):
         if prog_id == MOVE_PID or prog_id == WRITE_PID:
             scratch.execute(prog_id, arg)
 
+        if prog_name == 'ADD':
+            states = np.zeros([npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
+            state_stack = [states]
+        elif prog_name == 'RETURN':
+            state_stack.pop()
+
         if verbose:
             # Print Step Output
             if prog_id == MOVE_PID:
@@ -104,16 +110,13 @@ def inference(session, npi, x, y, verbose=False):
             # Print Environment
             scratch.pretty_print()
 
-        if prog_name == 'ADD':
-            states = np.zeros([npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
-
         # Get Environment, Argument Vectors
         env_in, arg_in, prog_in = [scratch.get_env()], [get_args(arg, arg_in=True)], [[prog_id]]
         t, n_p, n_args, h_states = session.run([npi.terminate, npi.program_distribution, npi.arguments, npi.h_states],
-                                               feed_dict={npi.env_in: env_in, npi.arg_in: arg_in,
-                                                          npi.prg_in: prog_in, npi.states: states})
+                                               feed_dict={npi.env_in: [env_in], npi.arg_in: [arg_in],
+                                                          npi.prg_in: prog_in, npi.states: state_stack[-1]})
 
-        states = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
+        state_stack[-1] = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2 * npi.npi_core_dim])
 
         if np.argmax(t) == 1:
             # Update Environment if MOVE or WRITE

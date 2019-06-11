@@ -17,6 +17,7 @@ IN1_PTR, IN2_PTR, CARRY_PTR, OUT_PTR = range(4)
 LEFT, RIGHT = 0, 1
 DATA_PATH = "tasks/addition/data/train.pik"
 LOG_PATH = "tasks/addition/log/"
+PRINT_EVERY = 100
 
 
 def train_addition(epochs, verbose=0):
@@ -48,69 +49,61 @@ def train_addition(epochs, verbose=0):
     # Initialize TF Session
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        step_def_loss, step_arg_loss, term_acc, prog_acc, = 0.0, 0.0, 0.0, 0.0
+        arg0_acc, arg1_acc, arg2_acc, num_args = 0.0, 0.0, 0.0, 0
+        i = 0
 
         # Start Training
         for ep in range(1, epochs + 1):
-            for i in range(len(data)):
-                # Setup Environment
-                in1, in2, steps = data[i]
-                scratch = ScratchPad(in1, in2)
-                x, y = steps[:-1], steps[1:]
+            for _, _, full_trace in data:
+                for steps in full_trace:
+                    # Setup Environment
+                    x, y = steps[:-1], steps[1:]
 
-                # Run through steps, and fit!
-                step_def_loss, step_arg_loss, term_acc, prog_acc, = 0.0, 0.0, 0.0, 0.0
-                arg0_acc, arg1_acc, arg2_acc, num_args = 0.0, 0.0, 0.0, 0
-                for j in range(len(x)):
-                    # print("suboperation {}: ".format(j))
-                    (prog_name, prog_in_id), arg, term = x[j]
-                    (_, prog_out_id), arg_out, term_out = y[j]
+                    env_in, prog_name, prog_in_id, args_in, term = list(map(list, zip(*x)))
+                    _, prog_name_out, prog_out_id, args_out, term_out = list(map(list, zip(*y)))
 
-                    # Update Environment if MOVE or WRITE
-                    if prog_in_id == MOVE_PID or prog_in_id == WRITE_PID:
-                        scratch.execute(prog_in_id, arg)
+                    env_in = np.array(env_in)
+                    env_in = np.expand_dims(env_in, axis=0)
 
                     # Get Environment, Argument Vectors
-                    env_in = [scratch.get_env()]
-                    arg_in, arg_out = [get_args(arg, arg_in=True)], get_args(arg_out, arg_in=False)
-                    prog_in, prog_out = [[prog_in_id]], [prog_out_id]
-                    term_out = [1] if term_out else [0]
+                    args_in = np.array([get_args(arg, arg_in=True) for arg in args_in])
+                    args_out = np.array([get_args(arg, arg_in=False) for arg in args_out])
+                    args_out = np.transpose(args_out, (1, 0, 2))
 
-                    # reset state if we recurse
-                    if prog_in[0][0] == P["ADD"]:
-                        states = np.zeros([npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
+                    prog_in, prog_out = [prog_in_id], [prog_out_id]
+
+                    term_out = np.array(term_out)
+                    term_out.astype(int)
+                    term_out = np.expand_dims(term_out, axis=0)
+
+                    states = np.zeros([npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
 
                     # Fit!
-                    if prog_out_id == MOVE_PID or prog_out_id == WRITE_PID:
-                        loss, t_acc, p_acc, a_acc, h_states, _ = sess.run(
-                            [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.h_states, npi.arg_train_op],
-                            feed_dict={npi.env_in: env_in, npi.arg_in: arg_in, npi.prg_in: prog_in,
-                                       npi.y_prog: prog_out, npi.y_term: term_out,
-                                       npi.y_args[0]: [arg_out[0]], npi.y_args[1]: [arg_out[1]],
-                                       npi.y_args[2]: [arg_out[2]], npi.states: states})
-                        step_arg_loss += loss
-                        term_acc += t_acc
-                        prog_acc += p_acc
-                        arg0_acc += a_acc[0]
-                        arg1_acc += a_acc[1]
-                        arg2_acc += a_acc[2]
-                        num_args += 1
-                        states = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
-                    else:
-                        loss, t_acc, p_acc, h_states, _ = sess.run(
-                            [npi.default_loss, npi.t_metric, npi.p_metric, npi.h_states, npi.default_train_op],
-                            feed_dict={npi.env_in: env_in, npi.arg_in: arg_in, npi.prg_in: prog_in,
-                                       npi.y_prog: prog_out, npi.y_term: term_out, npi.states: states})
-                        step_def_loss += loss
-                        term_acc += t_acc
-                        prog_acc += p_acc
-                        states = np.reshape(h_states, [npi.npi_core_layers, npi.bsz, 2*npi.npi_core_dim])
+                    loss, t_acc, p_acc, a_acc, h_states, _ = sess.run(
+                        [npi.arg_loss, npi.t_metric, npi.p_metric, npi.a_metrics, npi.h_states, npi.arg_train_op],
+                        feed_dict={npi.env_in: env_in, npi.arg_in: [args_in], npi.prg_in: prog_in,
+                                   npi.y_prog: prog_out, npi.y_term: term_out,
+                                   npi.y_args[0]: [args_out[0]], npi.y_args[1]: [args_out[1]],
+                                   npi.y_args[2]: [args_out[2]], npi.states: states})
+                    step_arg_loss += loss
+                    term_acc += t_acc/PRINT_EVERY
+                    prog_acc += p_acc/PRINT_EVERY
+                    arg0_acc += a_acc[0]/PRINT_EVERY
+                    arg1_acc += a_acc[1]/PRINT_EVERY
+                    arg2_acc += a_acc[2]/PRINT_EVERY
+                    num_args += len(x)
 
-                print("Epoch {0:02d} Step {1:03d} Default Step Loss {2:05f}, " \
-                      "Argument Step Loss {3:05f}, Term: {4:03f}, Prog: {5:03f}, A0: {6:03f}, " \
-                      "A1: {7:03f}, A2: {8:03}" \
-                      .format(ep, i, step_def_loss / len(x), step_arg_loss / len(x), term_acc / len(x),
-                              prog_acc / len(x), arg0_acc / num_args, arg1_acc / num_args,
-                              arg2_acc / num_args))
+                    if i % PRINT_EVERY == 0:
+                        print("Epoch {0:02d} Step {1:03d} " \
+                              "Argument Step Loss {2:05f}, Term: {3:03f}, Prog: {4:03f}, A0: {5:03f}, " \
+                              "A1: {6:03f}, A2: {7:03f}" \
+                              .format(ep, i, step_arg_loss / num_args, term_acc,
+                                      prog_acc, arg0_acc, arg1_acc,
+                                      arg2_acc))
+                        step_def_loss, step_arg_loss, term_acc, prog_acc, = 0.0, 0.0, 0.0, 0.0
+                        arg0_acc, arg1_acc, arg2_acc, num_args = 0.0, 0.0, 0.0, 0
+                    i += 1
 
             # Save Model
             saver.save(sess, 'tasks/addition/log/model.ckpt', global_step=len(data)*ep)
