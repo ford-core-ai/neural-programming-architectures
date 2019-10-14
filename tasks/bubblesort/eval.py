@@ -60,13 +60,13 @@ def repl(session, npi, data, verbose):
     else:
         # run verbose test samples
         while True:
-            inpt = input('Enter Two Numbers, or Hit Enter for Random Pair: ')
+            inpt = input('Enter space separated numbers, or hit enter for a random array: ')
 
             if inpt == "":
-                array, _ = data[np.random.randint(len(data))]
+                array = np.random.randint(10, size=np.random.randint(low=2, high=12)).tolist()
 
             else:
-                array = map(int, inpt.split())
+                array = list(map(int, inpt.split()))
 
             inference(session, npi, array, verbose=True)
 
@@ -77,7 +77,7 @@ def inference(session, npi, array, verbose):
         print("")
 
     # Setup Environment
-    scratch = ScratchPad(array)
+    scratch = ScratchPad(array, length=len(array))
     prog_name, prog_id, arg, term = 'BUBBLESORT', 2, [], False
 
     while True:
@@ -148,7 +148,7 @@ def inference(session, npi, array, verbose):
                 # Print Environment
                 scratch.pretty_print()
 
-                print("Model Output: %s => %s" % (str(array), str(output)))
+                print("Model Output: %s => %s" % (str(array), str(list(output))))
                 print("Correct Out : %s => %s" % (str(array), str(correct)))
                 print("Correct!" if result else "Incorrect!")
 

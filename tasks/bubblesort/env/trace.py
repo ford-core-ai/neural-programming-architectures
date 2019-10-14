@@ -66,9 +66,9 @@ class Trace():
         self.construct(BUBBLE, P[BUBBLE], [], False)
 
         # call recursive BSTEP
-        self.construct(BSTEP, P[BSTEP], [], False)
+        self.construct(BSTEP, P[BSTEP], [], True)
         self.bstep()
-        self.construct(RETURN, P[RETURN], [], False)
+        # self.construct(RETURN, P[RETURN], [], False)
 
     def bstep(self):
         self.construct(COMPSWAP, P[COMPSWAP], [], False)
@@ -82,10 +82,10 @@ class Trace():
         self.construct(PTR, P[PTR], [VAL2_PTR, RIGHT], False)
 
         # optionally recurse
-        self.construct(BSTEP, P[BSTEP], [], False)
+        self.construct(BSTEP, P[BSTEP], [], True)
         if self.scratch.bstep():
             self.bstep()
-        self.construct(RETURN, P[RETURN], [], False)
+        # self.construct(RETURN, P[RETURN], [], False)
 
     def reset(self):
         self.construct(RESET, P[RESET], [], False)
@@ -112,7 +112,7 @@ class Trace():
         self.construct(PTR, P[PTR], [VAL2_PTR, LEFT], False)
 
         # optionally recurse
-        self.construct(LSHIFT, P[LSHIFT], [], False)
+        self.construct(LSHIFT, P[LSHIFT], [], True)
         if self.scratch.lshift():
             self.lshift()
-        self.construct(RETURN, P[RETURN], [], False)
+        # self.construct(RETURN, P[RETURN], [], False)

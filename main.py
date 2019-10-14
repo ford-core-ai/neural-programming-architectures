@@ -36,6 +36,7 @@ def main(_):
         # Evaluate Model
         if FLAGS.do_eval:
             evaluate_addition()
+
     elif FLAGS.task == "bubblesort":
         # Generate Data (if necessary)
         if FLAGS.generate:

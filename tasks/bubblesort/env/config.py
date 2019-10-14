@@ -88,9 +88,9 @@ class ScratchPad():           # Addition Environment
 
     def get_env(self):
         env = np.zeros((4,), dtype=np.int32)
-        if 0 <= self.val1_ptr < CONFIG["ENVIRONMENT_LEN"]:
+        if 0 <= self.val1_ptr < self.length:
             env[1] = 1
-        if 0 <= self.val2_ptr < CONFIG["ENVIRONMENT_LEN"]:
+        if 0 <= self.val2_ptr < self.length:
             env[2] = 1
         if env[1] == 1 and env[2] == 1:
             if self[self.val1_ptr] <= self[self.val2_ptr]:
